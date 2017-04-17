@@ -1,6 +1,6 @@
 # electron-address-book
 
-> My world-class app
+The purpose of this application is to demonstrate more of the use for the ipcMain and ipcRender functions as it relates to file input and output operations. Assuming that the electron developer wishes to have local file IO for their desktop application. This particular example uses very basic / vanilla JavaScript, and represents best practices for splitting apart the main and renderer process
 
 
 ## Dev
