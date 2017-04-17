@@ -2,16 +2,196 @@
 <html>
 	<head>
 		<meta charset="utf-8">
-		<title>Electron boilerplate</title>
-		<link rel="stylesheet" href="index.css">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<title>Electron Address Book</title>
+		<link rel="stylesheet" href="./assets/css/w3.css">
+		<link rel="stylesheet" href="./assets/css/w3-theme-deep-purple.css">
 	</head>
 	<body>
-		<div class="container">
-			<header>
-				<h1>Electron boilerplate</h1>
-			</header>
-			<section class="main"></section>
-			<footer></footer>
+		<div class="w3-container w3-theme w3-padding-16">
+			<h1>Electron Address Book</h1>
+			<label>Address Book File</label>
+			<input class="w3-input w3-margin-bottom" id="file-name" type="text" disabled>
+			<button class="w3-button" id="create-new">Create New</button>
+			<button class="w3-button" id="open-existing">Open Existing</button>
 		</div>
+
+		<div class="w3-bar w3-padding-top">
+			<button class="w3-button w3-bar-item w3-theme-action" id="new-contact" disabled>New Contact</button>
+		</div>
+
+		<div id="letter-heading-container"></div>
+
+		<template id="letter-header">
+			<div class="w3-panel w3-margin-bottom w3-theme">
+				<h1 class="letter-name">A</h1>
+			</div>
+			<div class="people-list">
+			</div>
+		</template>
+
+		<template id="person">
+			<div class="w3-panel w3-card-2">
+				<span onclick="this.parentElement.style.display='none'" class="w3-button w3-white w3-xlarge w3-right">×</span>
+				<p>ID: <a href="javascript:void(0);" class="person-id"></a></p>
+				<p>Last Name: <span class="last-name"></span></p>
+				<p>First Name: <span class="first-name"></span></p>
+			</div>
+		</template>
+
+		<div id="person-editor" class="w3-modal">
+			<div class="w3-modal-content">
+				<header class="w3-container w3-theme">
+					<span onclick="document.getElementById('person-editor').style.display='none'" class="w3-button w3-display-topright w3-theme-action">&times;</span>
+					<h2>Person Editor</h2>
+				</header>
+				<div class="w3-container">
+					<label>ID</label>
+					<input class="w3-input" id="id" disabled></input>
+					<label>Last Name</label>
+					<input class="w3-input" id="LastName"></input>
+					<label>First Name</label>
+					<input class="w3-input" id="FirstName"></input>
+				</div>
+				<footer class="w3-container w3-theme">
+					<div class="w3-bar w3-padding">
+						<button class="w3-button w3-bar-item w3-theme-action w3-border w3-round-xlarge" id="pe-save">Save</button>
+						<button class="w3-button w3-bar-item w3-theme-action w3-border w3-round-xlarge" onclick="document.getElementById('person-editor').style.display='none'">Cancel</button>
+					</div>
+				</footer>
+			</div>
+		</div>
+
+		<script>
+
+			const {ipcRenderer} = require('electron')
+
+			function init_page() {
+				var alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+				alphabet.forEach( function(letter) {
+					//Grab the letter header template
+					var lht = document.getElementById( "letter-header" );
+
+					//Grab the elements from the letter header template
+					var lht_letter_name_elem = lht.content.querySelectorAll(".letter-name");
+					var lht_people_list_elem = lht.content.querySelectorAll(".people-list");
+
+					//Define the elements of the letter header template
+					lht_letter_name_elem[0].textContent = letter;
+					lht_people_list_elem[0].id = "people-" + letter;
+
+					//Clone the node that we just created
+					var lht_node = document.importNode( lht.content, true );
+
+					//Add the node to the main document
+					document.getElementById( "letter-heading-container" ).appendChild( lht_node );
+				} );
+
+				ipcRenderer.send( "page-initialized" );
+			}
+
+			document.getElementById( "create-new" ).addEventListener("click", function() {
+				//When the new file button is clicked ask the main process to show the saveFileDialog box
+				ipcRenderer.send( "get-new-file-from-user" );
+			});
+
+			document.getElementById( "open-existing" ).addEventListener("click", function() {
+				//When the open existing file is clicked ask the main process to show the openFileDialog box
+				ipcRenderer.send( "get-existing-file-from-user" );
+			});
+
+			ipcRenderer.on("ab-file-selected", (event, arg) => {
+				//When a new file has been selected...
+
+				//Set the file name to the file name element
+				document.getElementById( "file-name" ).value = arg;
+
+				//Enable the new contact button
+				document.getElementById( "new-contact" ).disabled = false;
+
+				//Clear the DOM for each letter listing
+				var alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+				alphabet.forEach( function(letter) {
+					document.getElementById( "people-" + letter ).innerHTML = "";
+				} );
+
+				//Ask the main process to read the file and the people to the DOM here
+				event.sender.send( "get-file-details", arg );
+			});
+
+			ipcRenderer.on("add-person", (event, arg) => {
+				//This 'add-person' is in reference to adding them to the DOM / list on the main page
+				//This responds each time that the main process tells us to add a person while looping through the people array in the address book file
+
+				//Grab the person template
+				var person_template = document.getElementById( "person" );
+
+				//Grab elements from the person template
+				var person_template_id_elem = person_template.content.querySelectorAll(".person-id");
+				var person_template_fname_elem = person_template.content.querySelectorAll(".first-name")
+				var person_template_lname_elem = person_template.content.querySelectorAll(".last-name")
+
+				//Define attributes of the person element template
+				person_template_id_elem[0].textContent = arg.id;
+				person_template_id_elem[0].setAttribute("onclick", "edit_person(" + arg.id + ");")
+				person_template_fname_elem[0].textContent = arg.FirstName;
+				person_template_lname_elem[0].textContent = arg.LastName;
+
+				//Clone the person template
+				var person_node = document.importNode( person_template.content, true );
+
+				//Add the person template to the appropriate letter for their last name
+				document.getElementById( "people-" + arg.LastName.toUpperCase().charAt(0) ).appendChild( person_node );
+
+			});
+
+			function edit_person( pid ) {
+				//When the ID of a person is clicked
+				//Ask the main process for information about the person id requested
+				ipcRenderer.send( "get-person-details-for-person-editor-dialog", pid );
+			}
+
+			ipcRenderer.on( "person-details-for-person-editor", (event, arg) => {
+				//When we receive information about the person display the person editor modal form
+				document.getElementById( "id" ).value = arg["id"];
+				document.getElementById( "LastName").value = arg["LastName"];
+				document.getElementById( "FirstName").value = arg["FirstName"];
+
+				document.getElementById('person-editor').style.display='block';
+
+			} );
+
+			document.getElementById( "pe-save" ).addEventListener("click", function(e) {
+				//When the save button on the person editor modal dialog box is clicked
+				//Build a person object
+				var this_person_details = {
+					"id": document.getElementById("id").value,
+					"LastName": document.getElementById("LastName").value,
+					"FirstName": document.getElementById("FirstName").value
+				};
+
+				//Close the modal dialog box
+				document.getElementById('person-editor').style.display='none';
+
+				//Request that the main process update the address book file with the appropriate user details which we supplied
+				ipcRenderer.send( "update-person", this_person_details );
+				
+			});
+
+			document.getElementById("new-contact").addEventListener("click", function(e) {
+				//When the 'new-contact' button is pressed
+				//Set the attribute of the person editor modal form to essentailly blank values
+				document.getElementById("id").value = 0;
+				document.getElementById( "LastName").value = "";
+				document.getElementById( "FirstName").value = "";
+
+				//Show the person editor form
+				document.getElementById('person-editor').style.display='block';
+			})
+			
+
+			init_page();
+		</script>
+
 	</body>
 </html>

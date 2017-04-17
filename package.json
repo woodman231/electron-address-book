@@ -25,7 +25,8 @@
     "electron"
   ],
   "dependencies": {
-    "electron-debug": "^1.0.0"
+    "electron-debug": "^1.0.0",
+    "fs": "0.0.1-security"
   },
   "devDependencies": {
     "devtron": "^1.1.0",
