@@ -1,1 +1,0 @@
-{ contact_index:0, people:[]}
