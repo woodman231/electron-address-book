@@ -153,10 +153,12 @@
 
 			ipcRenderer.on( "person-details-for-person-editor", (event, arg) => {
 				//When we receive information about the person display the person editor modal form
+				//Set the attributes of the elements on the form
 				document.getElementById( "id" ).value = arg["id"];
 				document.getElementById( "LastName").value = arg["LastName"];
 				document.getElementById( "FirstName").value = arg["FirstName"];
 
+				//Display the form
 				document.getElementById('person-editor').style.display='block';
 
 			} );
